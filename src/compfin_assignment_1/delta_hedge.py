@@ -2,12 +2,11 @@
 
 from typing import Optional, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import scipy.stats as st
 
-from src.compfin_assignment_1.utils.constants import FREQUENCY_TO_HOUR, N_HOURS_PER_YEAR
+from compfin_assignment_1.utils.constants import FREQUENCY_TO_HOUR, N_HOURS_PER_YEAR
 
 
 class OptionHedging:
@@ -342,20 +341,3 @@ class OptionHedging:
             (float)
         """
         return np.arange(self.n_step + 1)[::freq], self.step_size * freq
-
-
-hedging_port_value, option_value, stock_value = (
-    OptionHedging.simulate_hedging_strategy_w_fixed_vol_one_year(100, 0.01, 80, 1, 0.2, "monthly")
-)
-
-plt.figure(figsize=(20, 10))
-
-plt.plot(option_value, label="Option Price", linewidth=0.5, color="blue")
-plt.plot(hedging_port_value, label="Hedging Price", linestyle="--", linewidth=2, color="red")
-
-plt.title("European call option replication using delta hedge.")
-plt.xlabel("Time")
-plt.ylabel("Price")
-
-plt.legend()
-plt.show()
