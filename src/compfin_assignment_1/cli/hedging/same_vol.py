@@ -2,10 +2,10 @@
 
 import typer
 
-
 app = typer.Typer()
 
 
 @app.command(name="same-vol")
 def same_vol():
+    """Example for CLI usage."""
     print("It is working!")
