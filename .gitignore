@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# PyCharm-generated files
+.idea/*
+
+# Visual outputs
+*.pdf
+*.png
+*.mp4
+*.html
+
+# Data files
+*.xlsx
+*.csv

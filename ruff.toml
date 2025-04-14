@@ -1,0 +1,26 @@
+# Any lint rule here can be ignored by adding '# noqa' comment in the line in question.
+
+# In case a certain rule needs to be ignored for a whole file the following comment
+# can be added to the first line (LOC 1): '# ruff: noqa: {code}'
+
+# Set the maximum line length to 99.
+line-length = 99
+
+[lint]
+# Add the `line-too-long` rule to the enforced rule set. By default, Ruff omits rules that
+# overlap with the use of a formatter, like Black, but we can override this behavior by
+# explicitly adding the rule.
+extend-select = [
+    "E501",
+    "D",  # pydocstyle
+    "N",  # pep8-naming,
+    "ARG",  # flake8-unused-arguments
+    "I",  # order imports
+]
+
+ignore = [
+    "N806",  # Allows using capital letters in variable names
+]
+
+[lint.pydocstyle]
+convention = "google"
