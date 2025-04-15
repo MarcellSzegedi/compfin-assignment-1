@@ -2,12 +2,11 @@
 
 from typing import Optional, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import scipy.stats as st
 
-from src.compfin_assignment_1.utils.constants import FREQUENCY_TO_HOUR, N_HOURS_PER_YEAR
+from compfin_assignment_1.utils.constants import FREQUENCY_TO_HOUR, N_HOURS_PER_YEAR
 
 
 class OptionHedging:
@@ -57,6 +56,7 @@ class OptionHedging:
         t_end: float,
         volatility: float,
         hedging_freq: str,
+        random_seed: Optional[int] = None,
     ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Calculates hedge amounts in asset and cash for a European option.
 
@@ -76,6 +76,7 @@ class OptionHedging:
             volatility: Time independent volatility used for the underlying asset price simulation
                             and the delta hedge calculation.
             hedging_freq: Frequency of the hedging strategy.
+            random_seed: Random seed for the Random Number Generator.
 
         Returns:
             Hedging portfolio value for every time point (1D numpy array)
@@ -83,7 +84,7 @@ class OptionHedging:
             Underlying asset price in time (1D numpy array)
         """
         n_time_step = N_HOURS_PER_YEAR * t_end
-        hedging_instance = cls(s_0, r, strike, n_time_step, t_end)
+        hedging_instance = cls(s_0, r, strike, n_time_step, t_end, random_seed)
 
         stock_prices = hedging_instance.stock_price_simulation(volatility)
         option_prices = hedging_instance.option_price_calculation(stock_prices, volatility)
@@ -97,6 +98,41 @@ class OptionHedging:
         )
 
         return hedging_port_value, option_prices, stock_prices
+
+    @classmethod
+    def hedging_discrepancy_simulation(
+        cls,
+        s_0: float,
+        r: float,
+        strike: float,
+        t_end: float,
+        volatility: float,
+        hedging_freq: str,
+        random_seed: Optional[int] = None,
+    ):
+        """Calculates the deviation of the delta hedging portfolio from the european option.
+
+        The function uses the assumptions and the results of the black-scholes model for the
+        aforementioned derivative.
+
+        Args:
+            s_0: Stock price at time 0.
+            r: Yearly risk-free interest rate.
+            strike: Strike price  of the european option.
+            t_end: End time of the simulation in years.
+            volatility: Time independent volatility used for the underlying asset price simulation
+                            and the delta hedge calculation.
+            hedging_freq: Frequency of the hedging strategy.
+            random_seed: Random seed for the Random Number Generator.
+
+        Returns:
+            The difference between the simulated option price and the delta hedging portfolio for
+            one trajectory. (1D numpy array)
+        """
+        hedging_port, option_price, _ = cls.simulate_hedging_strategy_w_fixed_vol_one_year(
+            s_0, r, strike, t_end, volatility, hedging_freq, random_seed
+        )
+        return np.abs(hedging_port - option_price)
 
     def stock_price_simulation(self, volatility: float) -> npt.NDArray[np.float64]:
         """Simulates a time-series for the stock price over the interval [0, T_end].
@@ -342,20 +378,3 @@ class OptionHedging:
             (float)
         """
         return np.arange(self.n_step + 1)[::freq], self.step_size * freq
-
-
-hedging_port_value, option_value, stock_value = (
-    OptionHedging.simulate_hedging_strategy_w_fixed_vol_one_year(100, 0.01, 80, 1, 0.2, "monthly")
-)
-
-plt.figure(figsize=(20, 10))
-
-plt.plot(option_value, label="Option Price", linewidth=0.5, color="blue")
-plt.plot(hedging_port_value, label="Hedging Price", linestyle="--", linewidth=2, color="red")
-
-plt.title("European call option replication using delta hedge.")
-plt.xlabel("Time")
-plt.ylabel("Price")
-
-plt.legend()
-plt.show()
