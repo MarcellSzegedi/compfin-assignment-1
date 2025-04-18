@@ -94,12 +94,12 @@ class OptionHedging:
         stock_prices = hedging_instance.stock_price_simulation(volatility_c)
         option_prices = hedging_instance.option_price_calculation(stock_prices, volatility_c)
 
-        asset_value, cash_values = hedging_instance.hedge_coefficients_calculation(
+        _, cash_value, delta = hedging_instance.hedge_coefficients_calculation(
             option_prices, stock_prices, volatility_h, hedging_freq
         )
 
         hedging_port_value = hedging_instance.calculate_hedging_port_value(
-            asset_value, cash_values, hedging_freq
+            delta, stock_prices, cash_value
         )
 
         return hedging_port_value, option_prices, stock_prices
@@ -194,7 +194,7 @@ class OptionHedging:
         stock_price: npt.NDArray[np.float64],
         volatility: float,
         hedging_freq: str,
-    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Calculates the amount needed from the cask and the stock to replicate the option.
 
         The function assumes that the stock and option prices are calculated in every hour.
@@ -236,41 +236,80 @@ class OptionHedging:
             hedge_port_cash.append(cash_value)
             delta_values.append(delta)
 
-        return np.array(hedge_port_asset), np.array(hedge_port_cash)
+        return np.array(hedge_port_asset), np.array(hedge_port_cash), np.array(delta_values)
 
     def calculate_hedging_port_value(
         self,
-        stock_value: npt.NDArray[np.float64],
+        stock_amount: npt.NDArray[np.float64],
+        stock_price: npt.NDArray[np.float64],
         cash_value: npt.NDArray[np.float64],
-        hedging_freq: str,
     ) -> npt.NDArray[np.float64]:
         """Calculates the value of the hedging strategy at every time point.
 
-        For the in-between points the function uses linear interpolation.
-
         Args:
-            stock_value: Value kept in stock for every time point, where the hedging strategy is
-                            updated.
+            stock_amount: Amount of stock owned at the hedging portfolio update points.
+            stock_price: Array of stock prices at each time point.
             cash_value: Value kept in cash for every time point, where the hedging strategy is
                             updated.
-            hedging_freq: Hedging frequency.
 
         Returns:
             Cumulated value of the hedging strategy for every time point. (1D numpy array)
         """
-        hedging_portfolio_val = stock_value - cash_value
-        hedging_update_indices, _ = self._determine_hedging_update_times(hedging_freq)
-
-        hedging_time_points = self.time_remaining[hedging_update_indices]
-
-        # Order of the time series needs to be reversed
-        # due to the function configuration of np.interp
-        interpolated_hedging_port = np.interp(
-            x=self.time_remaining[::-1],
-            xp=hedging_time_points[::-1],
-            fp=hedging_portfolio_val[::-1],
+        hedging_port_asset_value = self._asset_value_calculation_cont(stock_amount, stock_price)
+        hedging_port_cash_value = self._cash_value_calculation_cont(
+            cash_value, stock_price.shape[0]
         )
-        return interpolated_hedging_port[::-1]
+
+        hedging_portfolio_val = hedging_port_asset_value - hedging_port_cash_value
+
+        return hedging_portfolio_val
+
+    @staticmethod
+    def _asset_value_calculation_cont(
+        stock_amounts: npt.NDArray[np.float64], stock_price: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
+        """Calculates the value of hedging portfolio asset part for every time point available.
+
+        Args:
+            stock_amounts: Amount of stock owned for the update point
+            stock_price: Stock prices for every time point available.
+
+        Returns:
+            Asset part value of the hedging portfolio for every time point. (2D numpy array)
+        """
+        asset_amounts = np.repeat(
+            stock_amounts[:-1], (len(stock_price) - 1) / (len(stock_amounts) - 1)
+        )
+        asset_values = asset_amounts * stock_price[:-1]
+        asset_values = np.append(asset_values, asset_amounts[-1] * stock_price[-1])
+        return asset_values
+
+    def _cash_value_calculation_cont(
+        self, cash_value: npt.NDArray[np.float64], total_n_step: int
+    ) -> npt.NDArray[np.float64]:
+        """Calculates the bank process part value of the hedging portfolio for every time point.
+
+        Args:
+            cash_value: Value kept in cash for the hedging portfolio update points.
+                            (1D numpy array)
+            total_n_step: Number of time step the option simulation is calculated for.
+
+        Returns:
+            Bank process values of the hedging portfolio for every time point. (1D numpy array)
+        """
+        steps = int((total_n_step - 1) / (cash_value.shape[0] - 1))
+        cash_value_expanded = np.empty((cash_value.shape[0] - 1) * steps, dtype=np.float64)
+        t_values = np.arange(steps)
+
+        for i in range(cash_value.shape[0] - 1):
+            start_val = cash_value[i]
+            cash_value_expanded[i * steps : (i + 1) * steps] = start_val * np.exp(
+                self.r * t_values
+            )
+
+        cash_value_expanded = np.append(cash_value_expanded, cash_value[-1])
+
+        return cash_value_expanded
 
     def _initialise_hedging_portfolio(
         self,
@@ -390,3 +429,14 @@ class OptionHedging:
             (float)
         """
         return np.arange(self.n_step + 1)[::freq], self.step_size * freq
+
+
+# import matplotlib.pyplot as plt
+#
+# h_port_val, option_price, _ = OptionHedging.simulate_hedging_strategy_w_fixed_vol_one_year(
+#     100, 0.01, 99, 1, 0.2, "monthly", 0.2, 100
+# )
+# plt.figure(figsize=(7, 7))
+# plt.plot(h_port_val)
+# plt.plot(option_price)
+# plt.show()

@@ -49,20 +49,20 @@ def plot_hedging_result():
             )
         )
 
-        t = np.linspace(0, market_settings["t_end"], hedging_port_price.shape[0])
+        t = np.linspace(0, market_settings["t_end"], hedging_port_price.shape[0] - 1)
         axis.plot(
             t,
-            hedging_port_price,
+            hedging_port_price[:-1],
             label="Hedging Portfolio",
             color="red",
             linestyle="--",
             linewidth=2,
         )
-        axis.plot(t, option_price, label="Option Price", color="blue", linewidth=0.5)
+        axis.plot(t, option_price[:-1], label="Option Price", color="blue", linewidth=0.5)
         axis.set_ylabel("Hedging Portfolio / Option Price in $")
 
         ax_twin = axis.twinx()
-        ax_twin.plot(t, stock_price, label="Stock Price", color="green", linewidth=0.5)
+        ax_twin.plot(t, stock_price[:-1], label="Stock Price", color="green", linewidth=0.5)
         ax_twin.set_ylabel("Stock Price in $")
 
         axis.set_title(f"Hedging frequency is {curr_hedging_freq}")
@@ -73,7 +73,7 @@ def plot_hedging_result():
 
     fig.suptitle("European Call Option Replication Over One Year Using Delta Hedging", fontsize=16)
 
-    plt.savefig("results/figures/option_vs_hedging_replication_same_vol.png", dpi=600)
+    plt.savefig("results/figures/option_vs_hedging_replication_same_vol_NEW.png", dpi=600)
     plt.show()
 
 
