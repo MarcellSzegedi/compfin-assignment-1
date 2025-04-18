@@ -23,14 +23,7 @@ app = typer.Typer()
 @app.command(name="hedging-with-same-vol")
 def plot_hedging_result():
     """Plots and saves the hedging strategy and the option price."""
-    market_settings = {
-        "s_0": 100,
-        "r": 0.01,
-        "strike": 99,
-        "t_end": 1,
-        "volatility_c": 0.2,
-        "random_seed": 100,
-    }
+    market_settings = {"s_0": 100, "r": 0.01, "strike": 99, "t_end": 1, "volatility_c": 0.2}
 
     fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(30, 10), constrained_layout=True)
 
@@ -45,7 +38,7 @@ def plot_hedging_result():
 
         hedging_port_price, option_price, stock_price = (
             OptionHedging.simulate_hedging_strategy_w_fixed_vol_one_year(
-                hedging_freq=curr_hedging_freq, **market_settings
+                hedging_freq=curr_hedging_freq, random_seed=col_idx + 2, **market_settings
             )
         )
 

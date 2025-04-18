@@ -102,7 +102,7 @@ def plot_hedging_error_with_diff_vol(
         "strike": 99,
         "t_end": 1,
         "volatility_c": 0.2,
-        "hedging_freq": "weekly",
+        "hedging_freq": "daily",
     }
     volatility_h_params = [0.05, 0.2, 0.5]
 
