@@ -32,11 +32,11 @@ def calculate_confidence_intervals_hedge_error(
     """
     hedging_freq_params = list(discrepancy_trajectories.keys())
     mean_discrepancy = {
-        hedging_freq: np.mean(np.array(discrepancies), axis=0)
+        hedging_freq: np.mean(np.array(discrepancies), axis=0)[:-1]
         for hedging_freq, discrepancies in discrepancy_trajectories.items()
     }
     std_error_discrepancy = {
-        hedging_freq: np.std(np.array(discrepancies), axis=0, ddof=1) / np.sqrt(n_sim)
+        hedging_freq: np.std(np.array(discrepancies), axis=0, ddof=1)[:-1] / np.sqrt(n_sim)
         for hedging_freq, discrepancies in discrepancy_trajectories.items()
     }
 
@@ -97,5 +97,5 @@ def plot_hedge_discrepancy(
     plt.legend(loc="upper left")
 
     plt.tight_layout()
-    plt.savefig("results/figures/hedging_replication_error.png", dpi=600)
+    plt.savefig("results/figures/hedging_replication_error_NEW.png", dpi=600)
     plt.show()
