@@ -54,8 +54,9 @@ class OptionHedging:
         r: float,
         strike: float,
         t_end: float,
-        volatility: float,
+        volatility_c: float,
         hedging_freq: str,
+        volatility_h: Optional[float] = None,
         random_seed: Optional[int] = None,
     ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Calculates hedge amounts in asset and cash for a European option.
@@ -73,9 +74,10 @@ class OptionHedging:
             r: Yearly risk-free interest rate.
             strike: Strike price  of the european option.
             t_end: End time of the simulation in years.
-            volatility: Time independent volatility used for the underlying asset price simulation
-                            and the delta hedge calculation.
+            volatility_c: Time independent volatility used for the underlying asset price
+                            simulation and the european option price calculation.
             hedging_freq: Frequency of the hedging strategy.
+            volatility_h: Time independent volatility used for the delta hedging strategy.
             random_seed: Random seed for the Random Number Generator.
 
         Returns:
@@ -83,14 +85,17 @@ class OptionHedging:
             European option price in time (1D numpy array)
             Underlying asset price in time (1D numpy array)
         """
+        if volatility_h is None:
+            volatility_h = volatility_c
         n_time_step = N_HOURS_PER_YEAR * t_end
+
         hedging_instance = cls(s_0, r, strike, n_time_step, t_end, random_seed)
 
-        stock_prices = hedging_instance.stock_price_simulation(volatility)
-        option_prices = hedging_instance.option_price_calculation(stock_prices, volatility)
+        stock_prices = hedging_instance.stock_price_simulation(volatility_c)
+        option_prices = hedging_instance.option_price_calculation(stock_prices, volatility_c)
 
         asset_value, cash_values = hedging_instance.hedge_coefficients_calculation(
-            option_prices, stock_prices, volatility, hedging_freq
+            option_prices, stock_prices, volatility_h, hedging_freq
         )
 
         hedging_port_value = hedging_instance.calculate_hedging_port_value(
@@ -106,8 +111,9 @@ class OptionHedging:
         r: float,
         strike: float,
         t_end: float,
-        volatility: float,
+        volatility_c: float,
         hedging_freq: str,
+        volatility_h: Optional[float] = None,
         random_seed: Optional[int] = None,
     ):
         """Calculates the deviation of the delta hedging portfolio from the european option.
@@ -120,19 +126,25 @@ class OptionHedging:
             r: Yearly risk-free interest rate.
             strike: Strike price  of the european option.
             t_end: End time of the simulation in years.
-            volatility: Time independent volatility used for the underlying asset price simulation
-                            and the delta hedge calculation.
+            volatility_c: Time independent volatility used for the underlying asset price
+                            simulation and option price calculation.
             hedging_freq: Frequency of the hedging strategy.
+            volatility_h: Time independent volatility used for the delta hedging strategy.
             random_seed: Random seed for the Random Number Generator.
 
         Returns:
             The difference between the simulated option price and the delta hedging portfolio for
             one trajectory. (1D numpy array)
         """
+        if volatility_h is None:
+            volatility_h = volatility_c
+
         hedging_port, option_price, _ = cls.simulate_hedging_strategy_w_fixed_vol_one_year(
-            s_0, r, strike, t_end, volatility, hedging_freq, random_seed
+            s_0, r, strike, t_end, volatility_c, hedging_freq, volatility_h, random_seed
         )
-        return np.abs(hedging_port - option_price)
+        return np.abs(hedging_port - option_price) * np.exp(
+            -r * np.arange(hedging_port.shape[0]) / hedging_port.shape[0] * t_end
+        )
 
     def stock_price_simulation(self, volatility: float) -> npt.NDArray[np.float64]:
         """Simulates a time-series for the stock price over the interval [0, T_end].
